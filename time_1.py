@@ -37,7 +37,7 @@ greeting_label.pack(pady=10)
 clock_label = tk.Label(root, text="", font=("Helvetica", 240, "bold"), fg="white", bg="black")
 clock_label.pack(expand=True)
 
-# Update the time and greeting
+# Update the time and greetings
 update_time()
 
 # Run the application
