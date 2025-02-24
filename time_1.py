@@ -2,22 +2,29 @@ import tkinter as tk
 from tkinter import simpledialog
 from time import strftime
 import requests  
+import pytz
+from datetime import datetime
 
+# Constants
 CITY = "Nairobi"
-API_KEY = "_____" 
+API_KEY = "_____"  # Replace with your API key
 
-# Create the root window first (needed for dialogs)
+# Timezones for world clocks
+TIMEZONES = {
+    "New York": "America/New_York",
+    "London": "Europe/London",
+    "Tokyo": "Asia/Tokyo",
+}
+
+# Create root window
 root = tk.Tk()
-root.withdraw()  # Hide main window until we get the name
+root.withdraw()  # Hide until name is entered
 
-# Ask for the user's name using a Tkinter dialog
+# Ask for user name
 USER_NAME = simpledialog.askstring("Input", "Enter your name:")
+USER_NAME = USER_NAME if USER_NAME else "Guest"
 
-# If the user cancels, set a default name
-if not USER_NAME:
-    USER_NAME = "Guest"
-
-# Function to get weather data
+# Function to get weather
 def get_weather():
     try:
         url = f"http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric"
@@ -28,13 +35,25 @@ def get_weather():
     except:
         return "Weather data unavailable"
 
-# Function to update time, greeting, and weather
+# Function to get time in a given city
+def get_time(city):
+    tz = pytz.timezone(TIMEZONES[city])
+    return datetime.now(tz).strftime('%H:%M' if is_24_hour else '%I:%M %p')
+
+# Function to update all times
 def update_time():
     global is_24_hour
-    
+
+    # Update main clock
     current_time = strftime('%H:%M' if is_24_hour else '%I:%M %p')
     clock_label.config(text=current_time)
-    
+
+    # Update world clocks above the main clock
+    newyork_label.config(text=f"New York\n{get_time('New York')}")
+    london_label.config(text=f"London\n{get_time('London')}")
+    tokyo_label.config(text=f"Tokyo\n{get_time('Tokyo')}")
+
+    # Greeting message
     hour = int(strftime('%H'))
     if 5 <= hour < 12:
         greeting = f"Good Morning, {USER_NAME}!"
@@ -42,11 +61,13 @@ def update_time():
         greeting = f"Good Afternoon, {USER_NAME}!"
     else:
         greeting = f"Good Evening, {USER_NAME}!"
-    greeting_label.config(text=greeting)
     
+    greeting_label.config(text=greeting)
     date_label.config(text=strftime('%A, %B %d, %Y'))
     weather_label.config(text=get_weather())
-    clock_label.after(60000, update_time)
+
+    # Refresh every minute
+    root.after(60000, update_time)
 
 # Toggle between 12-hour and 24-hour format
 def toggle_format():
@@ -54,43 +75,44 @@ def toggle_format():
     is_24_hour = not is_24_hour
     update_time()
 
-# Change background color
-def change_bg_color(color):
-    root.configure(bg=color)
-    greeting_label.configure(bg=color)
-    clock_label.configure(bg=color)
-    date_label.configure(bg=color)
-    weather_label.configure(bg=color)
-
-# Change font
-def change_font(font):
-    clock_label.config(font=(font, 240, "bold"))
-
 # Set up main window
-root.deiconify()  # Show the main window
-root.title("Flip Clock")
+root.deiconify()
+root.title("World Clock")
 root.geometry("1600x800")
 root.configure(bg="black")
 
-is_24_hour = False  # Default to 12-hour format
+is_24_hour = False
 
-# Labels
+# Labels for greeting and weather
 greeting_label = tk.Label(root, text="", font=("Helvetica", 24), fg="white", bg="black")
 greeting_label.pack(pady=10)
-clock_label = tk.Label(root, text="", font=("Helvetica", 240, "bold"), fg="white", bg="black")
-clock_label.pack(expand=True)
+
+# 🔹 World Clocks (Above the main clock)
+world_clock_frame = tk.Frame(root, bg="black")
+world_clock_frame.pack(pady=20)
+
+newyork_label = tk.Label(world_clock_frame, text="", font=("Helvetica", 40, "bold"), fg="white", bg="black")
+newyork_label.grid(row=0, column=0, padx=40)
+
+london_label = tk.Label(world_clock_frame, text="", font=("Helvetica", 40, "bold"), fg="white", bg="black")
+london_label.grid(row=0, column=1, padx=40)
+
+tokyo_label = tk.Label(world_clock_frame, text="", font=("Helvetica", 40, "bold"), fg="white", bg="black")
+tokyo_label.grid(row=0, column=2, padx=40)
+
+# Main Clock
+clock_label = tk.Label(root, text="", font=("Helvetica", 200, "bold"), fg="white", bg="black")
+clock_label.pack()
+
 date_label = tk.Label(root, text="", font=("Helvetica", 20), fg="white", bg="black")
 date_label.pack()
+
 weather_label = tk.Label(root, text="", font=("Helvetica", 20), fg="white", bg="black")
 weather_label.pack()
 
 # Buttons to toggle features
 toggle_button = tk.Button(root, text="Toggle 24H/12H", command=toggle_format)
 toggle_button.pack(pady=10)
-color_button = tk.Button(root, text="Change BG Color", command=lambda: change_bg_color("darkblue"))
-color_button.pack(pady=10)
-font_button = tk.Button(root, text="Change Font", command=lambda: change_font("Courier"))
-font_button.pack(pady=10)
 
 # Start the clock
 update_time()
