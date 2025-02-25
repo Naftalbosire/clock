@@ -4,10 +4,16 @@ from time import strftime
 import requests  
 import pytz
 from datetime import datetime
+from binance.client import Client
+
+# Binance Credentials (Replace with your own keys)
+API_KEY = ""
+API_SECRET = ""
+client = Client(API_KEY, API_SECRET)
 
 # Constants
 CITY = "Nairobi"
-API_KEY = "_____"  # Replace with your API key
+WEATHER_API_KEY = ""  # Replace with your API key
 
 # Timezones for world clocks
 TIMEZONES = {
@@ -21,13 +27,12 @@ root = tk.Tk()
 root.withdraw()  # Hide until name is entered
 
 # Ask for user name
-USER_NAME = simpledialog.askstring("Input", "Enter your name:")
-USER_NAME = USER_NAME if USER_NAME else "Guest"
+USER_NAME = simpledialog.askstring("Input", "Enter your name:") or "Guest"
 
 # Function to get weather
 def get_weather():
     try:
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric"
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={WEATHER_API_KEY}&units=metric"
         response = requests.get(url).json()
         temp = response["main"]["temp"]
         weather_desc = response["weather"][0]["description"].title()
@@ -40,33 +45,73 @@ def get_time(city):
     tz = pytz.timezone(TIMEZONES[city])
     return datetime.now(tz).strftime('%H:%M' if is_24_hour else '%I:%M %p')
 
+def get_usd_to_kes_rate():
+    try:
+        API_KEY = ""  # Replace with your actual API key
+        url = f"https://v6.exchangerate-api.com/v6//latest/USD"
+        response = requests.get(url).json()
+        return float(response["conversion_rates"]["KES"])
+    except Exception as e:
+        print("Error fetching USD to KES rate from Exchangerate API:", e)
+        return 160  # Fallback rate
+
+
+
+# Function to fetch Binance balances
+def get_binance_balances():
+    try:
+        # 🔹 Fetch account balances
+        account_info = client.get_account()
+        balances = account_info["balances"]
+
+        # 🔹 Filter non-zero balances
+        owned_coins = {b["asset"]: float(b["free"]) for b in balances if float(b["free"]) > 0}
+
+        # 🔹 Get estimated total in USD
+        total_usd = 0
+        balance_text = ""
+
+        for coin, amount in owned_coins.items():
+            symbol = f"{coin}USDT"
+            try:
+                price = float(client.get_symbol_ticker(symbol=symbol)["price"])
+                usd_value = amount * price
+                total_usd += usd_value
+                balance_text += f"{coin}: {amount:.6f} ≈ ${usd_value:.2f}\n"
+            except:
+                balance_text += f"{coin}: {amount:.6f} (No USDT price found)\n"
+
+        # 🔹 Convert to KES
+        usd_to_kes = get_usd_to_kes_rate()
+        total_kes = total_usd * usd_to_kes
+
+        # 🔹 Update UI
+        balance_label.config(text=balance_text)
+        total_label.config(text=f"Total Balance: ${total_usd:.2f} | KES {total_kes:,.2f} (Rate: {usd_to_kes:.2f})")
+
+    except Exception as e:
+        total_label.config(text="Error fetching balance")
+        print("Error fetching Binance balances:", e)
+
+    root.after(2000, get_binance_balances)  # Refresh every 2 seconds
+
+
+
+
 # Function to update all times
 def update_time():
     global is_24_hour
-
-    # Update main clock
-    current_time = strftime('%H:%M' if is_24_hour else '%I:%M %p')
-    clock_label.config(text=current_time)
-
-    # Update world clocks above the main clock
+    clock_label.config(text=strftime('%H:%M' if is_24_hour else '%I:%M %p'))
+    
     newyork_label.config(text=f"New York\n{get_time('New York')}")
     london_label.config(text=f"London\n{get_time('London')}")
     tokyo_label.config(text=f"Tokyo\n{get_time('Tokyo')}")
 
-    # Greeting message
     hour = int(strftime('%H'))
-    if 5 <= hour < 12:
-        greeting = f"Good Morning, {USER_NAME}!"
-    elif 12 <= hour < 18:
-        greeting = f"Good Afternoon, {USER_NAME}!"
-    else:
-        greeting = f"Good Evening, {USER_NAME}!"
-    
-    greeting_label.config(text=greeting)
+    greeting_label.config(text=f"Good {'Morning' if hour < 12 else 'Afternoon' if hour < 16 else 'Evening'}, {USER_NAME}!")
     date_label.config(text=strftime('%A, %B %d, %Y'))
     weather_label.config(text=get_weather())
 
-    # Refresh every minute
     root.after(60000, update_time)
 
 # Toggle between 12-hour and 24-hour format
@@ -77,7 +122,7 @@ def toggle_format():
 
 # Set up main window
 root.deiconify()
-root.title("World Clock")
+root.title("My Assistant")
 root.geometry("1600x800")
 root.configure(bg="black")
 
@@ -87,7 +132,7 @@ is_24_hour = False
 greeting_label = tk.Label(root, text="", font=("Helvetica", 24), fg="white", bg="black")
 greeting_label.pack(pady=10)
 
-# 🔹 World Clocks (Above the main clock)
+# World Clocks
 world_clock_frame = tk.Frame(root, bg="black")
 world_clock_frame.pack(pady=20)
 
@@ -110,12 +155,35 @@ date_label.pack()
 weather_label = tk.Label(root, text="", font=("Helvetica", 20), fg="white", bg="black")
 weather_label.pack()
 
-# Buttons to toggle features
+# Toggle Button
 toggle_button = tk.Button(root, text="Toggle 24H/12H", command=toggle_format)
 toggle_button.pack(pady=10)
 
-# Start the clock
-update_time()
+# 🔹 Crypto Section (Bottom Left)
+crypto_frame = tk.Frame(root, bg="black", padx=10, pady=10)
+crypto_frame.pack(side="left", anchor="sw", padx=20, pady=20)
 
-# Run the application
+# Frame for Deposit & Withdraw (Side by Side)
+top_crypto_frame = tk.Frame(crypto_frame, bg="black")
+top_crypto_frame.pack(anchor="w", fill="x")
+
+deposit_label = tk.Label(top_crypto_frame, text="Deposit (Crypto In):", font=("Helvetica", 16, "bold"), fg="green", bg="black")
+deposit_label.pack(side="left", padx=20)
+
+withdraw_label = tk.Label(top_crypto_frame, text="Withdraw (Crypto Out):", font=("Helvetica", 16, "bold"), fg="red", bg="black")
+withdraw_label.pack(side="left", padx=20)
+
+# Crypto Balances
+balance_label = tk.Label(crypto_frame, text="Fetching balances...", font=("Helvetica", 14), fg="white", bg="black", justify="left")
+balance_label.pack(anchor="w", pady=10)
+
+# Total Balance (USD & KES)
+total_label = tk.Label(crypto_frame, text="Total Balance: $0.00 | KES 0", font=("Helvetica", 16, "bold"), fg="white", bg="black")
+total_label.pack(anchor="w", pady=10)
+
+# Start Updates
+update_time()
+get_binance_balances()
+
+# Run App
 root.mainloop()
