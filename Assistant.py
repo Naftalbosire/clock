@@ -3,6 +3,7 @@ from tkinter import simpledialog
 from time import strftime
 import requests  
 import pytz
+import speedtest
 from datetime import datetime
 from binance.client import Client
 
@@ -24,9 +25,9 @@ TIMEZONES = {
 
 # Create root window
 root = tk.Tk()
-root.withdraw()  # Hide until name is entered
+root.withdraw()  
 
-# Ask for user name
+
 USER_NAME = simpledialog.askstring("Input", "Enter your name:") or "Guest"
 
 # Function to get weather
@@ -47,12 +48,12 @@ def get_time(city):
 
 def get_usd_to_kes_rate():
     try:
-        API_KEY = "ea4fdd92fb15acb9fe98df67"  # Replace with your actual API key
-        url = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/USD"
+        API_KEY = ""  # Replace with your actual API key
+        url = f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KES&apikey={API_KEY}"
         response = requests.get(url).json()
-        return float(response["conversion_rates"]["KES"])
+        return float(response["Realtime Currency Exchange Rate"]["5. Exchange Rate"])
     except Exception as e:
-        print("Error fetching USD to KES rate from Exchangerate API:", e)
+        print("Error fetching USD to KES rate from Alpha Vantage API:", e)
         return 130  # Fallback rate
 
 # Function to fetch Binance balances
@@ -101,8 +102,28 @@ def get_binance_balances():
         total_label.config(text="Error fetching balance", fg="red")
         print("Error fetching Binance balances:", e)
 
-    root.after(5000, get_binance_balances)  # Refresh every 5 seconds
+    root.after(5000, get_binance_balances) 
 
+# check internet speed
+import speedtest
+
+def check_internet_speed():
+    try:
+        st = speedtest.Speedtest()
+        st.get_best_server()
+        
+        # Measure speeds
+        download_speed = st.download() / 1_000_000  
+        upload_speed = st.upload() / 1_000_000      # Convert to Mbps
+        
+        # Display speeds if connected
+        internet_label.config(text=f"📶 {download_speed:.2f} Mbps ↓ | {upload_speed:.2f} Mbps ↑", fg="green")
+    
+    except Exception as e:
+        print("Speedtest Error:", e)  # Debugging log
+        internet_label.config(text="❌", fg="red")  # Show ❌ if there's an error
+    
+    root.after(10_000, check_internet_speed)
 
 
 # Function to update all times
@@ -138,6 +159,11 @@ is_24_hour = False
 # Labels for greeting and weather
 greeting_label = tk.Label(root, text="", font=("Helvetica", 24), fg="white", bg="black")
 greeting_label.pack(pady=10)
+
+# internet connection
+internet_label = tk.Label(root, text="Checking Internet...", font=("Helvetica", 20), fg="yellow", bg="black")
+internet_label.pack()
+
 
 # World Clocks
 world_clock_frame = tk.Frame(root, bg="black")
@@ -194,6 +220,8 @@ total_label.pack(fill="x", padx=20, pady=10)
 # Start Updates
 update_time()
 get_binance_balances()
+check_internet_speed()
+
 
 # Run App
 root.mainloop()
