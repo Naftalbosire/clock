@@ -7,14 +7,17 @@ import speedtest
 from datetime import datetime
 from binance.client import Client
 
+print("🔹 Assistant is running...")  # New line
+
+
 # Binance Credentials (Replace with your own keys)
-API_KEY = ""
-API_SECRET = ""
+API_KEY = "QMCFymSe2WsCsG1ZJrsBXXbwB4jSP6yLki1P7ATRRazhY9L02YslbaPmjp2kVrsP"
+API_SECRET = "QGrj1DWAZWnbPb3nfeEFHAxQZlGbiYIhizYniCIy69rRwfKFgdKrBPUpUvgRpDZI"
 client = Client(API_KEY, API_SECRET)
 
 # Constants
 CITY = "Nairobi"
-WEATHER_API_KEY = ""  # Replace with your API key
+WEATHER_API_KEY = "b050f35226cff1614e8c65dfea0cff85"  # Replace with your API key
 
 # Timezones for world clocks
 TIMEZONES = {
@@ -48,18 +51,18 @@ def get_time(city):
 
 def get_usd_to_kes_rate():
     try:
-        API_KEY = ""  # Replace with your actual API key
+        API_KEY = "IH996TCU6QIXW640"  # Replace with your actual API key
         url = f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KES&apikey={API_KEY}"
         response = requests.get(url).json()
         return float(response["Realtime Currency Exchange Rate"]["5. Exchange Rate"])
     except Exception as e:
         print("Error fetching USD to KES rate from Alpha Vantage API:", e)
-        return 130  # Fallback rate
+        return 129  # Fallback rate
 
 # Function to fetch Binance balances
 def get_binance_balances():
     try:
-        # Fetch account balances
+        # Fetch account balancesx
         account_info = client.get_account()
         balances = account_info["balances"]
 
@@ -102,10 +105,9 @@ def get_binance_balances():
         total_label.config(text="Error fetching balance", fg="red")
         print("Error fetching Binance balances:", e)
 
-    root.after(5000, get_binance_balances) 
+    root.after(30000, get_binance_balances) 
 
 # check internet speed
-import speedtest
 
 def check_internet_speed():
     try:
@@ -140,7 +142,7 @@ def update_time():
     date_label.config(text=strftime('%A, %B %d, %Y'))
     weather_label.config(text=get_weather())
 
-    root.after(60000, update_time)
+    root.after(59000, update_time)
 
 # Toggle between 12-hour and 24-hour format
 def toggle_format():
@@ -150,7 +152,7 @@ def toggle_format():
 
 # Set up main window
 root.deiconify()
-root.title("My Assistant")
+root.title("Assistant")
 root.geometry("1600x800")
 root.configure(bg="black")
 
@@ -161,7 +163,7 @@ greeting_label = tk.Label(root, text="", font=("Helvetica", 24), fg="white", bg=
 greeting_label.pack(pady=10)
 
 # internet connection
-internet_label = tk.Label(root, text="Checking Internet...", font=("Helvetica", 20), fg="yellow", bg="black")
+internet_label = tk.Label(root, text="Checking Internet...", font=("Helvetica", 18), fg="yellow", bg="black")
 internet_label.pack()
 
 
@@ -221,6 +223,8 @@ total_label.pack(fill="x", padx=20, pady=10)
 update_time()
 get_binance_balances()
 check_internet_speed()
+# get_btc_price()
+
 
 
 # Run App
